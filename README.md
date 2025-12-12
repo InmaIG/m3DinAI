@@ -48,7 +48,7 @@ source .venv/bin/activate
 pip install -r requirements.txt
 ```
 
-## Quick check (recommended)
+## Quick check 
 
 After installing dependencies, you can run a minimal smoke test (no data required):
 
