@@ -6,7 +6,10 @@ The pipeline implements brightfield HCI preprocessing, segmentation, feature ext
 
 > **Python**: 3.9  
 > **Note**: Python 3.9 is recommended (and required on Windows) due to PyRadiomics installation constraints.
+> 
 > **Key libs**: OpenCV, NumPy, scikit-image, Mahotas, PyRadiomics, SimpleITK, scikit-learn, UMAP, matplotlib, seaborn.
+> > Note: you may see a harmless warning from `umap` about `pkg_resources` deprecation; it does not affect execution.
+
 
 ---
 
