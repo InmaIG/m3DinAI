@@ -1,7 +1,7 @@
 # Core scientific stack
 numpy==1.24.2
 pandas==1.5.3
-scipy>=1.10.0
+scipy>=1.8,<1.9.2
 
 # Imaging & features
 opencv-python>=4.7.0
