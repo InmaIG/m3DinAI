@@ -9,6 +9,7 @@ scikit-image==0.20.0
 mahotas==1.4.13
 SimpleITK>=2.2.0
 pyradiomics==3.1.0
+docopt==0.6.2
 
 # ML & DR
 scikit-learn==1.2.2
