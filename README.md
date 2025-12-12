@@ -135,7 +135,7 @@ Raw images are **not** included in this repository. The scripts expect a directo
 
 If you use this software, please cite both the paper and the archived code release:
 
-[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.17911785.svg)](https://doi.org/10.5281/zenodo.17911785)
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.17911785.svg)](https://doi.org/10.5281/zenodo.17233459)
 
 ```bibtex
 @software{m3dinai_zenodo_2025,
@@ -144,13 +144,13 @@ If you use this software, please cite both the paper and the archived code relea
   year      = {2025},
   publisher = {Zenodo},
   version   = {v1.0.3},
-  doi       = {10.5281/zenodo.17911785},
+  doi       = {10.5281/zenodo.17233459},
   url       = {https://github.com/InmaIG/m3DinAI}
 }
 ```
 
-Archived at Zenodo: https://doi.org/10.5281/zenodo.17911785  
-Latest version: https://doi.org/10.5281/zenodo.17911785
+Archived at Zenodo: https://doi.org/10.5281/zenodo.17233459
+Latest version: https://doi.org/10.5281/zenodo.17233459
 
 ---
 
