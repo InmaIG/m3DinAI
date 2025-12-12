@@ -4,7 +4,8 @@
 Custom Python scripts used in the paper **“Label-free morphological profiling of chemotherapy response in 3D breast cancer spheroids”**.  
 The pipeline implements brightfield HCI preprocessing, segmentation, feature extraction (morphology, texture, and radiomics), dimensionality reduction, clustering, and basic statistics for TNBC spheroids.
 
-> **Python**: 3.10  
+> **Python**: 3.9  
+> **Note**: Python 3.9 is recommended (and required on Windows) due to PyRadiomics installation constraints.
 > **Key libs**: OpenCV, NumPy, scikit-image, Mahotas, PyRadiomics, SimpleITK, scikit-learn, UMAP, matplotlib, seaborn.
 
 ---
