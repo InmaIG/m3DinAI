@@ -1,0 +1,10 @@
+# Demo data and outputs (do not commit)
+demo_data/
+demo_out/
+demo/_downloads/
+
+# Common local files
+__pycache__/
+*.pyc
+.DS_Store
+.ipynb_checkpoints/
