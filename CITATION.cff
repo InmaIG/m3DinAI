@@ -4,9 +4,9 @@ title: "m3DinAI: Morphometric profiling pipeline for 3D TNBC spheroids"
 authors:
   - family-names: "Iáñez García"
     given-names: "Inmaculada"
-version: "v1.0.2"
-doi: "10.5281/zenodo.17242729"
-date-released: "2025-10-01"
+version: "v1.1.0"
+doi: "10.5281/zenodo.18860886"
+date-released: "2026-03-04"
 url: "https://github.com/InmaIG/m3DinAI"
 
 preferred-citation:
@@ -15,10 +15,10 @@ preferred-citation:
   authors:
     - family-names: "Iáñez García"
       given-names: "Inmaculada"
-  version: "v1.0.2"
-  doi: "10.5281/zenodo.17242729"
+  version: "v1.1.0"
+  doi: "10.5281/zenodo.18860886"
   url: "https://github.com/InmaIG/m3DinAI"
-  date-released: "2025-10-01"
+  date-released: "2026-03-04"
 
 references:
   - type: article

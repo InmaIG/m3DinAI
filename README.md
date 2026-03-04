@@ -205,7 +205,10 @@ All scripts support CLI arguments (portable execution; no hardcoded paths requir
 
 ## Citation
 
-If you use this software, please cite the paper and the archived code release (see `CITATION.cff`).
+If you use this software, please cite the paper and the Zenodo software archive:
+
+- Software (v1.1.0): https://doi.org/10.5281/zenodo.18860886
+- Software (all versions / concept DOI): https://doi.org/10.5281/zenodo.17233459
 
 If you use the demo dataset, please cite:
 https://doi.org/10.5281/zenodo.18847934
