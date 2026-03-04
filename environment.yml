@@ -1,0 +1,21 @@
+name: m3dinai_demo
+channels:
+  - radiomics
+  - conda-forge
+dependencies:
+  - python=3.9
+  - pip
+  - numpy
+  - pandas
+  - scikit-learn
+  - openpyxl
+  - matplotlib
+  - tqdm
+  - scikit-image
+  - mahotas
+  - simpleitk=2.4.1
+  - opencv
+  - umap-learn
+  - numba
+  - pyyaml
+  - pyradiomics

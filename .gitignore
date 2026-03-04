@@ -1,10 +1,40 @@
+# =========================
 # Demo data and outputs (do not commit)
+# =========================
 demo_data/
 demo_out/
 demo/_downloads/
 
-# Common local files
+# =========================
+# Python cache / builds
+# =========================
 __pycache__/
-*.pyc
-.DS_Store
+*.py[cod]
+*.pyd
+*.so
+*.egg-info/
+build/
+dist/
+
+# =========================
+# Virtualenv / Conda
+# =========================
+.venv/
+venv/
+ENV/
+env/
+.conda/
+
+# =========================
+# Jupyter
+# =========================
 .ipynb_checkpoints/
+
+# =========================
+# OS / editor files
+# =========================
+.DS_Store
+Thumbs.db
+Desktop.ini
+.vscode/
+.idea/

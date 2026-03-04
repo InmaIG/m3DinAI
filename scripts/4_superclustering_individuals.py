@@ -90,6 +90,22 @@ excel_folder = r"Y:\CELL_PAINTING_2024_EXPORT\IIG\ESFERAS PAPER\2. CLUSTERING 3D
 results_folder = os.path.join(excel_folder, "RESULTADOS_GRAFICAS")
 os.makedirs(results_folder, exist_ok=True)
 
+# --- CLI ---
+import argparse
+
+parser = argparse.ArgumentParser(description="m3DinAI - UMAP + clustering (individual replicates)")
+parser.add_argument("--labeled-dir", default=excel_folder, help="Directory with labeled Excel files")
+parser.add_argument("--results-dir", default=results_folder, help="Directory to write results (plots/csv)")
+parser.add_argument("--keep-treatments", default="",
+                    help="Comma-separated treatments to keep (e.g. DMSO,MMS,Taxane). Empty = keep all.")
+args, _unknown = parser.parse_known_args()
+
+excel_folder = args.labeled_dir
+results_folder = args.results_dir
+os.makedirs(results_folder, exist_ok=True)
+
+KEEP_TREATMENTS = {x.strip() for x in args.keep_treatments.split(",") if x.strip()} if args.keep_treatments.strip() else None
+
 # --- PROCESS EACH EXCEL FILE ---
 for file in os.listdir(excel_folder):
     if file.endswith(".xlsx"):
@@ -101,6 +117,10 @@ for file in os.listdir(excel_folder):
         try:
             # --- DATA LOADING ---
             df = pd.read_excel(excel_path)
+
+            # Optional demo filter
+            if KEEP_TREATMENTS is not None and "Treatment" in df.columns:
+                df = df[df["Treatment"].isin(KEEP_TREATMENTS)].reset_index(drop=True)
 
             # --- CLEANING ---
             non_numeric_cols = df.select_dtypes(exclude=['number']).columns
@@ -160,3 +180,4 @@ for file in os.listdir(excel_folder):
 
         except Exception as e:
             print(f"❌ Error processing {file}: {e}")
+

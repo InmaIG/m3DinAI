@@ -1,24 +1,13 @@
 # demo/config_demo.yaml
 demo:
-  # Demo dataset location (relative to the repo root)
   data_dir: "demo_data"
-
-  # Where to write demo outputs (relative to the repo root)
   out_dir: "demo_out"
-
-  # What to run
   timepoints: ["72H"]
   replicates: ["R1"]
-
-  # Optional: set to [] to include every experiment folder under data_dir/72H/R1/
-  # If you only kept one cell line, you can still leave this empty.
-  include_experiment_name_contains: []
-
-  # Treatment filter for the UMAP plot (script 4)
+  include_experiment_name_contains: ["BT549"]
   keep_treatments: ["DMSO", "MMS", "Taxane"]
 
 pipeline:
-  # Pipeline script paths (relative to the repo root)
   feature_extraction: "scripts/1_feature_extraction.py"
   copy_excels: "scripts/2_copy_excels.py"
   label_treatments: "scripts/3_label_treatments.py"

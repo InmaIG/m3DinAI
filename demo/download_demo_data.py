@@ -1,6 +1,7 @@
 # demo/download_demo_data.py
 import hashlib
 import json
+import shutil
 import sys
 import urllib.request
 import zipfile
@@ -29,7 +30,13 @@ def http_get_json(url: str) -> dict:
         return json.loads(resp.read().decode("utf-8"))
 
 def download(url: str, dest: Path) -> None:
+    if dest.exists() and dest.stat().st_size > 0:
+        print(f"ZIP already present, skipping download:\n  {dest}")
+        return
+
     print(f"Downloading:\n  {url}\n→ {dest}")
+    dest.parent.mkdir(parents=True, exist_ok=True)
+
     with urllib.request.urlopen(url) as resp, dest.open("wb") as out:
         total = resp.headers.get("Content-Length")
         total = int(total) if total else None
@@ -57,23 +64,61 @@ def pick_zip_file(record: dict) -> dict:
     files = record.get("files", [])
     if not files:
         raise SystemExit("ERROR: No files found in Zenodo record.")
-    # Prefer a .zip if present
+
     zips = [f for f in files if str(f.get("key", "")).lower().endswith(".zip")]
     if len(zips) == 1:
         return zips[0]
     if len(zips) > 1:
-        # If multiple zips exist, pick the largest (common)
         zips.sort(key=lambda f: f.get("size", 0), reverse=True)
         return zips[0]
-    # Fallback: single file record
+
     if len(files) == 1:
         return files[0]
+
     raise SystemExit("ERROR: Multiple files found but none are .zip. Please adjust the picker.")
 
+def ensure_expected_layout(data_dir: Path) -> None:
+    """
+    Expect: data_dir/72H/R1/...
+    If the ZIP created an extra top-level folder, try to fix it.
+    """
+    expected = data_dir / "72H" / "R1"
+    if expected.exists():
+        return
+
+    # Common case: ZIP has a single top-level folder (e.g., "72H/" or "<something>/72H/")
+    children = [p for p in data_dir.iterdir() if p.is_dir()]
+    if len(children) == 1:
+        top = children[0]
+        # If top already contains 72H, move its contents up one level
+        if (top / "72H").exists():
+            tmp = data_dir / "__tmp_move__"
+            tmp.mkdir(exist_ok=True)
+            for item in top.iterdir():
+                shutil.move(str(item), str(tmp / item.name))
+            # remove now-empty top folder
+            try:
+                top.rmdir()
+            except OSError:
+                pass
+            # move tmp contents back to data_dir
+            for item in tmp.iterdir():
+                shutil.move(str(item), str(data_dir / item.name))
+            tmp.rmdir()
+
+    # Re-check
+    if not expected.exists():
+        print(f"WARNING: Expected folder not found: {expected}")
+        print("Your ZIP may have a different top-level structure.")
+        print(f"Data directory contents: {[p.name for p in data_dir.iterdir()]}")
+    else:
+        print(f"✅ Data present under: {expected}")
+
 def main():
+    # Optional: allow passing a custom data dir as first argument
     data_dir = DEFAULT_DATA_DIR
-    if len(sys.argv) >= 2:
-        data_dir = REPO_ROOT / sys.argv[1]
+    if len(sys.argv) >= 2 and not sys.argv[1].startswith("-"):
+        data_dir = (REPO_ROOT / sys.argv[1]).resolve()
 
     api_url = f"https://zenodo.org/api/records/{ZENODO_RECORD_ID}"
     record = http_get_json(api_url)
@@ -81,33 +126,20 @@ def main():
     f = pick_zip_file(record)
     filename = f.get("key", f"zenodo_{ZENODO_RECORD_ID}.zip")
     download_url = f.get("links", {}).get("self") or f.get("links", {}).get("download")
-
     if not download_url:
         raise SystemExit("ERROR: Could not find a download URL in Zenodo response.")
 
     zip_path = DOWNLOADS_DIR / filename
     download(download_url, zip_path)
 
-    # Optional integrity check if Zenodo provided a checksum
-    checksum = f.get("checksum", "")
-    if checksum.startswith("md5:"):
-        # Zenodo often provides md5; we won't verify md5 here (sha256 is preferred).
-        print("Note: Zenodo checksum is MD5; skipping integrity verification.")
-    else:
-        # If you want strict checking, set your own SHA256 in the future.
-        pass
-
+    # Unzip (overwrite-friendly: we simply extract; existing files will be overwritten by ZipFile)
     unzip(zip_path, data_dir)
 
-    # sanity check
-    tp = data_dir / "72H" / "R1"
-    if not tp.exists():
-        print(f"WARNING: Expected folder not found: {tp}")
-        print("Check whether your ZIP has an extra top-level folder.")
-    else:
-        print(f"✅ Data present under: {tp}")
+    # Layout sanity check (and best-effort fix)
+    ensure_expected_layout(data_dir)
 
     print("\nDone.")
+    print(f"Data directory: {data_dir}")
 
 if __name__ == "__main__":
     main()

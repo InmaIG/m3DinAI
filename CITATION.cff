@@ -1,5 +1,5 @@
 cff-version: 1.2.0
-message: "If you use this software, please cite both the paper and this software archive."
+message: "If you use this software, please cite both the paper, this software archive, and the demo dataset (if used)."
 title: "m3DinAI: Morphometric profiling pipeline for 3D TNBC spheroids"
 authors:
   - family-names: "Iáñez García"
@@ -27,3 +27,17 @@ references:
       - family-names: "Iáñez García"
         given-names: "Inmaculada"
     year: 2025
+
+  - type: dataset
+    title: "m3DinAI demo dataset (72H R1; DMSO/MMS/Taxane)"
+    authors:
+      - family-names: "Iáñez García"
+        given-names: "Inmaculada"
+      - family-names: "Ramos"
+        given-names: "M. C."
+      - family-names: "Martínez García"
+        given-names: "M."
+      - family-names: "Fernandez Godino"
+        given-names: "R."
+    year: 2026
+    doi: "10.5281/zenodo.18847934"

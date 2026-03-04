@@ -9,6 +9,27 @@ from skimage.feature import local_binary_pattern, graycomatrix, graycoprops
 from radiomics import featureextractor
 import SimpleITK as sitk
 
+# --- Silence PyRadiomics warnings/logging ---
+import logging
+import warnings
+
+# Hide common, non-critical warnings from PyRadiomics / numpy
+warnings.filterwarnings("ignore", message="Shape features are only available 3D input.*")
+warnings.filterwarnings("ignore", message="GLCM is symmetrical.*")
+
+# PyRadiomics uses Python logging under the "radiomics" logger
+logging.getLogger("radiomics").setLevel(logging.ERROR)
+
+# Optional: silence also submodules explicitly (belt-and-suspenders)
+for name in [
+    "radiomics.featureextractor",
+    "radiomics.glcm",
+    "radiomics.shape",
+    "radiomics.firstorder",
+    "radiomics.imageoperations",
+]:
+    logging.getLogger(name).setLevel(logging.ERROR)
+
 # 📌 Root directory containing all experiments
 root_dir = r"Y:\CELL_PAINTING_2024_EXPORT\IIG\ESFERAS PAPER\2. CLUSTERING 3D"
 
@@ -16,6 +37,27 @@ root_dir = r"Y:\CELL_PAINTING_2024_EXPORT\IIG\ESFERAS PAPER\2. CLUSTERING 3D"
 timepoints = ["72H", "96H", "120H"]
 replicates = ["R1", "R2", "R3"]
 cell_lines = ["BT549", "HCC1806", "MDA468"]
+
+# --- CLI ---
+import argparse
+
+parser = argparse.ArgumentParser(description="m3DinAI - Feature extraction")
+parser.add_argument("--root-dir", default=root_dir, help="Root directory containing experiments")
+parser.add_argument("--timepoints", default=",".join(timepoints),
+                    help="Comma-separated, e.g. 72H,96H (default: from script)")
+parser.add_argument("--replicates", default=",".join(replicates),
+                    help="Comma-separated, e.g. R1,R2 (default: from script)")
+parser.add_argument("--cell-lines", default=",".join(cell_lines),
+                    help="Comma-separated, e.g. BT549,HCC1806 (default: from script)")
+parser.add_argument("--exp-contains", default="",
+                    help="Comma-separated substrings; only process experiment folders containing any of them")
+args, _unknown = parser.parse_known_args()
+
+root_dir = args.root_dir
+timepoints = [x.strip() for x in args.timepoints.split(",") if x.strip()]
+replicates = [x.strip() for x in args.replicates.split(",") if x.strip()]
+cell_lines = [x.strip() for x in args.cell_lines.split(",") if x.strip()]
+EXPERIMENT_NAME_CONTAINS = [x.strip() for x in args.exp_contains.split(",") if x.strip()]
 
 # List to collect base_dirs
 base_dirs = []
@@ -26,7 +68,12 @@ for tp in timepoints:
         current_path = os.path.join(root_dir, tp, rep)
         if not os.path.exists(current_path):
             continue
+
         for folder in os.listdir(current_path):
+            # Optional CLI filter: only process experiments whose folder name contains any of these substrings
+            if EXPERIMENT_NAME_CONTAINS and not any(k in folder for k in EXPERIMENT_NAME_CONTAINS):
+                continue
+
             full_path = os.path.join(current_path, folder)
             if os.path.isdir(full_path) and any(line in folder for line in cell_lines):
                 base_dirs.append(full_path)

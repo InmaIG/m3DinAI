@@ -1,5 +1,4 @@
 # demo/run_demo.py
-import os
 import subprocess
 import sys
 from pathlib import Path
@@ -8,10 +7,10 @@ import yaml
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 
-def run(cmd, env=None):
+def run(cmd):
     print("\n=== Running ===")
     print(" ".join(cmd))
-    p = subprocess.run(cmd, env=env)
+    p = subprocess.run(cmd)
     if p.returncode != 0:
         raise SystemExit(f"ERROR: command failed with exit code {p.returncode}")
 
@@ -27,20 +26,23 @@ def main():
     out_dir = (REPO_ROOT / demo["out_dir"]).resolve()
     out_dir.mkdir(parents=True, exist_ok=True)
 
-    env = os.environ.copy()
-    env["M3DINAI_ROOT_DIR"] = str(data_dir)
-    env["M3DINAI_OUT_DIR"] = str(out_dir)
+    # Standard output dirs (English)
+    excels_dir = (out_dir / "excels_demo").resolve()
+    labeled_dir = (out_dir / "excels_demo_labeled").resolve()
+    results_dir = (out_dir / "results_demo").resolve()
+    excels_dir.mkdir(parents=True, exist_ok=True)
+    labeled_dir.mkdir(parents=True, exist_ok=True)
+    results_dir.mkdir(parents=True, exist_ok=True)
 
-    # Standardize where scripts 2–4 will write/read (ENGLISH FOLDER NAMES)
-    env["M3DINAI_EXCELS_DIR"] = str(out_dir / "excels_demo")
-    env["M3DINAI_LABELED_DIR"] = str(out_dir / "excels_demo_labeled")
-    env["M3DINAI_RESULTS_DIR"] = str(out_dir / "results_demo")
-    env["M3DINAI_KEEP_TREATMENTS"] = ",".join(demo.get("keep_treatments", []))
+    timepoints = demo.get("timepoints", [])
+    replicates = demo.get("replicates", [])
+    keep_treatments = demo.get("keep_treatments", [])
+    exp_contains = demo.get("include_experiment_name_contains", [])
 
-    # Optional selection parameters
-    env["M3DINAI_TIMEPOINTS"] = ",".join(demo.get("timepoints", []))
-    env["M3DINAI_REPLICATES"] = ",".join(demo.get("replicates", []))
-    env["M3DINAI_EXPERIMENT_NAME_CONTAINS"] = ",".join(demo.get("include_experiment_name_contains", []))
+    tp_arg = ",".join(timepoints)
+    rep_arg = ",".join(replicates)
+    keep_arg = ",".join(keep_treatments)
+    exp_contains_arg = ",".join(exp_contains)
 
     # Resolve script paths
     s1 = (REPO_ROOT / pipeline["feature_extraction"]).resolve()
@@ -50,16 +52,35 @@ def main():
 
     py = sys.executable
 
-    # Run pipeline (1→2→3→4)
-    run([py, str(s1)], env=env)
-    run([py, str(s2)], env=env)
-    run([py, str(s3)], env=env)
-    run([py, str(s4)], env=env)
+    # Run pipeline (1→2→3→4) using CLI args (no env vars)
+    cmd1 = [py, str(s1), "--root-dir", str(data_dir)]
+    if tp_arg:
+        cmd1 += ["--timepoints", tp_arg]
+    if rep_arg:
+        cmd1 += ["--replicates", rep_arg]
+    if exp_contains_arg:
+        cmd1 += ["--exp-contains", exp_contains_arg]
+    run(cmd1)
+
+    cmd2 = [py, str(s2), "--root-dir", str(data_dir), "--out-excels-dir", str(excels_dir)]
+    if tp_arg:
+        cmd2 += ["--timepoints", tp_arg]
+    if rep_arg:
+        cmd2 += ["--replicates", rep_arg]
+    run(cmd2)
+
+    cmd3 = [py, str(s3), "--excels-dir", str(excels_dir), "--out-labeled-dir", str(labeled_dir)]
+    run(cmd3)
+
+    cmd4 = [py, str(s4), "--labeled-dir", str(labeled_dir), "--results-dir", str(results_dir)]
+    if keep_arg:
+        cmd4 += ["--keep-treatments", keep_arg]
+    run(cmd4)
 
     print("\n✅ Demo complete.")
     print(f"Outputs written to:\n  {out_dir}")
     print("Key folders:")
-    print(f"  - {Path(env['M3DINAI_RESULTS_DIR'])}")
+    print(f"  - {results_dir}")
 
 if __name__ == "__main__":
     try:
