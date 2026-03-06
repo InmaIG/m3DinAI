@@ -87,7 +87,7 @@ Optional (faster solver):
 ```bash
 conda install -n base -c conda-forge mamba -y
 mamba env create -f environment.yml
-conda activate m3dinai_demo
+conda activate m3dinai
 ```
 
 ### Alternative: pip (best-effort)
