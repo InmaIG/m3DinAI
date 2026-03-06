@@ -4,9 +4,9 @@ title: "m3DinAI: Morphometric profiling pipeline for 3D TNBC spheroids"
 authors:
   - family-names: "Iáñez García"
     given-names: "Inmaculada"
-version: "v1.1.0"
-doi: "10.5281/zenodo.18860886"
-date-released: "2026-03-04"
+version: "v1.1.1"
+doi: "10.5281/zenodo.18889899"
+date-released: "2026-03-06"
 url: "https://github.com/InmaIG/m3DinAI"
 
 preferred-citation:
@@ -15,10 +15,10 @@ preferred-citation:
   authors:
     - family-names: "Iáñez García"
       given-names: "Inmaculada"
-  version: "v1.1.0"
-  doi: "10.5281/zenodo.18860886"
+  version: "v1.1.1"
+  doi: "10.5281/zenodo.18889899"
   url: "https://github.com/InmaIG/m3DinAI"
-  date-released: "2026-03-04"
+  date-released: "2026-03-06"
 
 references:
   - type: article
@@ -29,7 +29,7 @@ references:
     year: 2025
 
   - type: dataset
-    title: "m3DinAI demo dataset (72H R1; DMSO/MMS/Taxane)"
+    title: "m3DinAI profiling demo dataset (BT549 72H R1; DMSO/MMS/Taxane)"
     authors:
       - family-names: "Iáñez García"
         given-names: "Inmaculada"
@@ -41,3 +41,17 @@ references:
         given-names: "R."
     year: 2026
     doi: "10.5281/zenodo.18847934"
+
+  - type: dataset
+    title: "m3DinAI MDC demo dataset (BT549; 3D spheroids; dose–response plate; DMSO/MMS + drugs)"
+    authors:
+      - family-names: "Iáñez García"
+        given-names: "Inmaculada"
+      - family-names: "Ramos"
+        given-names: "M. C."
+      - family-names: "Martínez García"
+        given-names: "M."
+      - family-names: "Fernandez Godino"
+        given-names: "R."
+    year: 2026
+    doi: "10.5281/zenodo.18876611"

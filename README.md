@@ -71,7 +71,7 @@ From the repository root:
 
 ```bash
 conda env create -f environment.yml
-conda activate m3dinai_demo
+conda activate m3dinai
 ```
 
 If `conda activate` does not work in PowerShell, use **Anaconda Prompt** (recommended for Windows), or run:
@@ -232,7 +232,7 @@ python scripts/mdc/0_mdc_pipeline.py --z-stack-dir "PATH/TO/EXPERIMENT/Images" -
 
 ## Demo datasets and software DOIs (Zenodo)
 
-* Software release: `10.5281/zenodo.18860886`
+* Software release (v1.1.1): `10.5281/zenodo.18889899`
 * MDC demo dataset: `10.5281/zenodo.18876611`
 * Profiling demo dataset: `10.5281/zenodo.18847934`
 
