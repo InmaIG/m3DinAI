@@ -1,9 +1,22 @@
 # =========================
 # Demo data and outputs (do not commit)
 # =========================
-demo_data/
-demo_out/
-demo/_downloads/
+
+# New demo layout
+demos/**/demo_data/
+demos/**/demo_out/
+demos/**/_downloads/
+demos/**/demo_mdc_data/
+demos/**/demo_mdc_out/
+demos/**/demo_*_data/
+demos/**/demo_*_out/
+
+# If your MDC pipeline writes intermediate image artifacts under the extracted dataset
+# (keep these if you do NOT want to commit generated projections/contours)
+**/1. projections/
+**/2. projections_8bit/
+**/3. contours/
+**/4. spheroids_contour/
 
 # =========================
 # Python cache / builds

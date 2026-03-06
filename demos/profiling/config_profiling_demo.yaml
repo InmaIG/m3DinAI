@@ -1,0 +1,14 @@
+# demo/config_demo.yaml
+demo:
+  data_dir: "demo_data"
+  out_dir: "demo_out"
+  timepoints: ["72H"]
+  replicates: ["R1"]
+  include_experiment_name_contains: ["BT549"]
+  keep_treatments: ["DMSO", "MMS", "Taxane"]
+
+pipeline:
+  feature_extraction: "scripts/profiling/1_feature_extraction.py"
+  copy_excels: "scripts/profiling/2_copy_excels.py"
+  label_treatments: "scripts/profiling/3_label_treatments.py"
+  umap_clustering: "scripts/profiling/4_superclustering_individuals.py"

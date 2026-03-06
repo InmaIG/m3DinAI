@@ -40,6 +40,7 @@ cell_lines = ["BT549", "HCC1806", "MDA468"]
 
 # --- CLI ---
 import argparse
+from pathlib import Path
 
 parser = argparse.ArgumentParser(description="m3DinAI - Feature extraction")
 parser.add_argument("--root-dir", default=root_dir, help="Root directory containing experiments")
@@ -51,35 +52,55 @@ parser.add_argument("--cell-lines", default=",".join(cell_lines),
                     help="Comma-separated, e.g. BT549,HCC1806 (default: from script)")
 parser.add_argument("--exp-contains", default="",
                     help="Comma-separated substrings; only process experiment folders containing any of them")
+parser.add_argument("--images-dir", default="",
+                    help="Direct path to an Images folder (single experiment mode)")
+parser.add_argument("--out-dir", default="",
+                    help="Output directory for single experiment mode (optional)")
+
 args, _unknown = parser.parse_known_args()
 
+# Apply CLI overrides (common)
 root_dir = args.root_dir
 timepoints = [x.strip() for x in args.timepoints.split(",") if x.strip()]
 replicates = [x.strip() for x in args.replicates.split(",") if x.strip()]
 cell_lines = [x.strip() for x in args.cell_lines.split(",") if x.strip()]
 EXPERIMENT_NAME_CONTAINS = [x.strip() for x in args.exp_contains.split(",") if x.strip()]
 
-# List to collect base_dirs
+# --------------------------
+# Build base_dirs (experiments to process)
+# --------------------------
+OUT_DIR_CLI = Path(args.out_dir) if args.out_dir else None
 base_dirs = []
 
-# Traverse all expected combinations
-for tp in timepoints:
-    for rep in replicates:
-        current_path = os.path.join(root_dir, tp, rep)
-        if not os.path.exists(current_path):
-            continue
+if args.images_dir:
+    images_dir_cli = Path(args.images_dir)
+    if not images_dir_cli.exists():
+        raise FileNotFoundError(f"Images folder not found: {images_dir_cli}")
 
-        for folder in os.listdir(current_path):
-            # Optional CLI filter: only process experiments whose folder name contains any of these substrings
-            if EXPERIMENT_NAME_CONTAINS and not any(k in folder for k in EXPERIMENT_NAME_CONTAINS):
+    base_dir_cli = images_dir_cli.parent  # experiment folder
+    base_dirs = [str(base_dir_cli)]
+    print(f"✅ Single-folder mode. Processing only:\n  {base_dir_cli}")
+
+else:
+    # --- Standard traversal mode (your existing logic) ---
+    # IMPORTANT: This block must APPEND to base_dirs, not re-create later.
+
+    for tp in timepoints:
+        for rep in replicates:
+            current_path = os.path.join(root_dir, tp, rep)
+            if not os.path.exists(current_path):
                 continue
+            for folder in os.listdir(current_path):
+                full_path = os.path.join(current_path, folder)
+                if os.path.isdir(full_path) and any(line in folder for line in cell_lines):
+                    if EXPERIMENT_NAME_CONTAINS:
+                        if not any(s in folder for s in EXPERIMENT_NAME_CONTAINS):
+                            continue
+                    base_dirs.append(full_path)
 
-            full_path = os.path.join(current_path, folder)
-            if os.path.isdir(full_path) and any(line in folder for line in cell_lines):
-                base_dirs.append(full_path)
+    print(f"✅ Found {len(base_dirs)} experimental folders for processing.")
 
-# Optional: check number of directories found
-print(f"✅ Found {len(base_dirs)} experimental folders for processing.")
+
 
 
 # ==============================================================================
@@ -91,17 +112,31 @@ for base_dir in base_dirs:
     try:
         print(f"\n🚀 Processing: {base_dir}")
 
-        # Generate experiment ID (e.g., 72H_R1_BT549)
-        experiment_id = base_dir.replace(root_dir, "").strip("\\").replace("\\", "_")
+        # Experiment ID (safe even if base_dir not under root_dir)
+        try:
+            experiment_id = base_dir.replace(root_dir, "").strip("\\").replace("\\", "_")
+        except Exception:
+            experiment_id = Path(base_dir).name
 
-        # Define paths
+        # Input Images folder
         images_dir = os.path.join(base_dir, "Images")
-        mip_dir = os.path.join(images_dir, "1. MIP")
-        mip8_dir = os.path.join(images_dir, "2. MIP8bits")
-        contours_dir = os.path.join(images_dir, "3. Contours")
-        spheroids_dir = os.path.join(images_dir, "4. Spheroids")
-        features_xlsx = os.path.join(base_dir, "spheroid_features.xlsx")
-        clusters_xlsx = os.path.join(base_dir, "spheroid_clusters.xlsx")
+        if not os.path.isdir(images_dir):
+            raise FileNotFoundError(f"Missing Images folder: {images_dir}")
+
+        # Choose where to write outputs
+        # - If --out-dir is provided: write everything there
+        # - Else: keep current behavior (write under Images / base_dir)
+        write_root = str(OUT_DIR_CLI) if OUT_DIR_CLI is not None else images_dir
+
+        # Define output paths
+        mip_dir = os.path.join(write_root, "1. MIP")
+        mip8_dir = os.path.join(write_root, "2. MIP8bits")
+        contours_dir = os.path.join(write_root, "3. Contours")
+        spheroids_dir = os.path.join(write_root, "4. Spheroids")
+
+        # Excel outputs
+        features_xlsx = os.path.join(str(OUT_DIR_CLI), "spheroid_features.xlsx") if OUT_DIR_CLI is not None else os.path.join(base_dir, "spheroid_features.xlsx")
+        clusters_xlsx = os.path.join(str(OUT_DIR_CLI), "spheroid_clusters.xlsx") if OUT_DIR_CLI is not None else os.path.join(base_dir, "spheroid_clusters.xlsx")
 
         # Ensure output folders exist
         for folder in [mip_dir, mip8_dir, contours_dir, spheroids_dir]:

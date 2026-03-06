@@ -58,5 +58,5 @@ for excel in BASE_DIR.glob("*.xlsx"):
     df.to_excel(out_path, index=False, engine="openpyxl")
     print(f"  ✔ Saved to {out_path}")
 
-print("Completed! All labeled files are in the 'Excels etiquetados' folder.")
+print("Completed! All labeled files are in the 'excels_demo_labeled' folder.")
 
