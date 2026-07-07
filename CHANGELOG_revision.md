@@ -71,6 +71,3 @@ Beyond `scripts/`, the rest of the repository was reviewed against the same crit
 - Confirmed there are no remaining hardcoded absolute paths, and no Spanish comments or
   emoji anywhere in the `.py`, `.md` or `.yaml` files.
 
-> Note for the authors: the paper title cited in `README.md` and `CITATION.cff`
-> ("Label-free morphological profiling of chemotherapy response in 3D breast cancer
-> spheroids") should be checked against the final manuscript title before resubmission.

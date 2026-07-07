@@ -6,8 +6,7 @@
 # by the Activity Ratio step), groups them by (cell line, timepoint), and draws one bar
 # chart per group: mean Activity Ratio +/- SD by treatment, with individual replicate
 # points overlaid. Significance vs DMSO is tested with a Welch t-test (Bonferroni
-# corrected). NOTE: the revision uses non-parametric tests + effect sizes instead
-# (see scripts/profiling/12_figure6_AR.py).
+# corrected).
 #
 # Input: a directory of *_variation_summary.csv named <LINE>_R<n>_<TIME>_*.csv
 #
@@ -95,8 +94,6 @@ def main():
         # variances between a treatment and DMSO, which is safer than Student's t here.
         # Bonferroni multiplies each p-value by the number of treatment-vs-DMSO comparisons
         # (n_comp) to control the family-wise error rate across the 4 tests in the panel.
-        # (The revision reports non-parametric tests + effect sizes instead - see
-        #  scripts/profiling/12_figure6_AR.py in the revision materials.)
         dmso_vals = g.loc[g["Treatment"] == "DMSO", "MeanRatio"].values
         n_comp = len(TREATMENT_ORDER) - 1  # number of treatment-vs-DMSO comparisons
         for i, treat in enumerate(TREATMENT_ORDER):

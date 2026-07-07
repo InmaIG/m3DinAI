@@ -5,8 +5,8 @@
 # Reads the labelled per-spheroid Excel files for the three cell lines (one replicate /
 # timepoint) and draws one violin plot per morphological feature, comparing the cell
 # lines. Historically features were min-max normalised before plotting; this is kept
-# behind --normalize for reproducibility, but the revised figure uses raw values
-# (see scripts/profiling/13_figure2_violins.py for the revision version with statistics).
+# behind --normalize for reproducibility, while the default plots raw, biologically
+# interpretable values.
 #
 # Input filenames follow: <LINE>_<REPLICATE>_<TIMEPOINT>_spheroid_features_trat.xlsx
 #
