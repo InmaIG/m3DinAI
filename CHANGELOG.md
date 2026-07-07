@@ -1,9 +1,8 @@
-# Revision changelog — code documentation & reproducibility
+# Changelog — code documentation & reproducibility
 
-This round of changes addresses **Reviewer 1, Major Concern 3** (code documentation
-insufficient for independent verification; hardcoded paths and experiment-specific labels;
-mixed English/Spanish comments). No analytical logic was changed — the edits add
-documentation, expose dataset-specific values, and remove hardcoded elements.
+This update improves the documentation and reproducibility of the code without changing any
+analytical logic: it adds inline documentation, exposes dataset-specific values as editable
+configuration, removes hardcoded paths, and unifies the comments to English.
 
 ## 1. Removed hardcoded file paths
 All scripts now take input/output locations as command-line arguments; no dataset-specific

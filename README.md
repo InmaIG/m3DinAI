@@ -1,6 +1,6 @@
 # m3DinAI
 
-m3DinAI is a Python workflow used in the paper **“Label-free morphological profiling of chemotherapy response in 3D breast cancer spheroids”**. It preprocesses brightfield Z-stacks / projections, segments spheroids, extracts morphology + texture + **radiomics** features, and performs downstream dimensionality reduction (PCA/UMAP), clustering, and statistical analysis.
+m3DinAI is a Python workflow used in the paper **“Label-free morphometric profiling reveals early drug responses in 3D tumor spheroids”**. It preprocesses brightfield Z-stacks / projections, segments spheroids, extracts morphology + texture + **radiomics** features, and performs downstream dimensionality reduction (PCA/UMAP), clustering, and statistical analysis.
 
 This repository contains two complementary workflows that are typically used in sequence:
 
