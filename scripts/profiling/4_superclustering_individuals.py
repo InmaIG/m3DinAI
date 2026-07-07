@@ -38,7 +38,7 @@ cell morphology data to perform the following steps:
 INPUT:
 - A folder containing `.xlsx` files, each with:
     - Numerical feature columns.
-    - A 'tratamiento' column indicating the treatment type.
+    - A 'Treatment' column indicating the treatment type.
     - Optional: an 'Imagen' column with image names.
 
 OUTPUT:
@@ -57,11 +57,8 @@ NOTES:
 - A fixed color map is used for consistent treatment coloring.
 - Non-numerical columns are automatically excluded.
 
-Author: [Your Name or Team]
-Date: [Creation or Last Update Date]
 """
 
-# UMAP NORMALIZADO Y FILTRADO OUTLIERS POR TRATAMIENTO
 
 import os
 import pandas as pd
@@ -86,7 +83,7 @@ color_map = {
 }
 
 # --- CONFIGURATION ---
-excel_folder = r"Y:\CELL_PAINTING_2024_EXPORT\IIG\ESFERAS PAPER\2. CLUSTERING 3D\Excels etiquetados"
+excel_folder = r"DATA_ROOT"  # placeholder; pass the real path via --labeled-dir
 results_folder = os.path.join(excel_folder, "RESULTADOS_GRAFICAS")
 os.makedirs(results_folder, exist_ok=True)
 
@@ -125,13 +122,17 @@ for file in os.listdir(excel_folder):
             # --- CLEANING ---
             non_numeric_cols = df.select_dtypes(exclude=['number']).columns
 
-            # filtrado outliers POR tratamiento
+            # Per-treatment outlier filtering. Outliers are defined WITHIN each treatment
+            # group (not globally) so that a genuinely disrupted treatment is not flagged as
+            # "outlier" relative to intact controls. A spheroid is kept only if EVERY feature
+            # lies within median +/- 3 SD of its own treatment group (robust median centre;
+            # 3 SD ~ keeps ~99% of a normal distribution while removing gross segmentation errors).
             filtered_groups = []
             for treatment in df['Treatment'].unique():
                 df_treat = df[df['Treatment'] == treatment]
                 df_treat_numeric = df_treat.drop(columns=non_numeric_cols)
 
-                # outlier threshold
+                # median +/- 3 SD band, applied per feature; row kept only if ALL features pass
                 medians = df_treat_numeric.median()
                 stds = df_treat_numeric.std()
                 lower = medians - 3 * stds
@@ -141,18 +142,26 @@ for file in os.listdir(excel_folder):
                 df_clean = df_treat.loc[mask]
                 filtered_groups.append(df_clean)
 
-            # recombinar todo
+            # Recombine all treatment groups back together
             df_filtered = pd.concat(filtered_groups).reset_index(drop=True)
             df_numeric_filtered = df_filtered.drop(columns=non_numeric_cols)
 
             # --- NORMALIZATION + UMAP ---
+            # z-score each feature so large-range features (e.g. Area) don't dominate the
+            # Euclidean distances UMAP relies on.
             scaler = StandardScaler()
             X_scaled = scaler.fit_transform(df_numeric_filtered)
 
+            # UMAP for 2D visualisation. n_neighbors=15 / min_dist=0.1 are the standard
+            # settings used throughout the study; random_state=42 fixes the embedding so the
+            # figure is reproducible. NOTE: UMAP is non-metric - distances between clusters
+            # are only qualitative.
             reducer = umap.UMAP(n_neighbors=15, min_dist=0.1, random_state=42)
             X_umap = reducer.fit_transform(X_scaled)
 
             # --- CLUSTERING (labels) ---
+            # Ward hierarchical clustering on the 2D embedding, cut to at most 5 clusters
+            # (criterion='maxclust', t=5) to colour/annotate sub-structure within the plot.
             linked = linkage(X_umap, method='ward')
             cluster_labels = fcluster(linked, t=5, criterion='maxclust')
 
@@ -179,5 +188,5 @@ for file in os.listdir(excel_folder):
             plt.close()
 
         except Exception as e:
-            print(f"❌ Error processing {file}: {e}")
+            print(f"[ERROR] Error processing {file}: {e}")
 

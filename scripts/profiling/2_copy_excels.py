@@ -3,7 +3,7 @@ import shutil
 import argparse
 
 # Root folder where we start searching
-root_dir = r"Y:\CELL_PAINTING_2024_EXPORT\IIG\ESFERAS PAPER\2. CLUSTERING 3D"
+root_dir = r"DATA_ROOT"  # placeholder; pass the real path via --root-dir
 
 # Destination folder for the collected Excel files
 out_excels_dir = os.path.join(root_dir, "SPHEROIDS_EXCELS_FULL")
@@ -54,9 +54,9 @@ for tp in timepoints:
                             new_name = f"{cl}_{rep}_{tp}_{excel_name}"
                             dst = os.path.join(out_excels_dir, new_name)
                             shutil.copy2(excel_path, dst)
-                            print(f"✅ Copied: {excel_path} -> {dst}")
+                            print(f"Copied: {excel_path} -> {dst}")
                             found = True
                             break  # stop searching more folders for this (tp, rep, cl)
 
             if not found:
-                print(f"❌ Not found: {cl} - {rep} - {tp}")
+                print(f"[ERROR] Not found: {cl} - {rep} - {tp}")

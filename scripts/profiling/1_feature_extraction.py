@@ -1,3 +1,31 @@
+# =======================================================================================
+# m3DinAI - Profiling feature extraction (image -> per-spheroid morphological features)
+# File: scripts/profiling/1_feature_extraction.py
+#
+# WHAT THIS SCRIPT DOES (per experiment folder)
+#   1. Maximum-Intensity Projection (MIP): collapses each z-stack (planes p01..p04) into a
+#      single 2D image by taking, per pixel, the maximum value across planes. This makes the
+#      whole spheroid visible in one image regardless of the focal plane.
+#   2. 8-bit conversion: robustly rescales the 16-bit MIP to 8-bit using 1st-99th percentile
+#      clipping (ignores a few saturated/dead pixels) followed by min-max normalisation.
+#   3. Segmentation: thresholds the spheroid (see segment step for the exact parameters and
+#      the rationale for each) and keeps the single largest external contour = the spheroid.
+#   4. Feature extraction: computes shape descriptors, texture features (GLCM, LBP, Haralick)
+#      and the full PyRadiomics feature set from the segmented spheroid, and writes them to
+#      spheroid_features.xlsx (one row per spheroid).
+#
+# KEY ASSUMPTION: exactly ONE spheroid per well/image, and it is the darkest, largest object
+# in the field. Segmentation selects the largest external contour on this basis; wells with
+# no object or with debris larger than the spheroid would need manual review.
+#
+# ADAPTING TO A NEW DATASET: edit the USER CONFIGURATION block below (cell-line tags,
+# timepoints, replicates and the input folder layout) or pass them on the command line.
+# All paths are CLI arguments; there are no dataset-specific absolute paths hardcoded.
+#
+#   python 1_feature_extraction.py --root-dir <DATA_ROOT> [--cell-lines ...] [--timepoints ...]
+#   python 1_feature_extraction.py --images-dir <.../Images> --out-dir <OUT>   # single experiment
+# =======================================================================================
+
 import cv2
 import numpy as np
 import os
@@ -30,10 +58,17 @@ for name in [
 ]:
     logging.getLogger(name).setLevel(logging.ERROR)
 
-# 📌 Root directory containing all experiments
-root_dir = r"Y:\CELL_PAINTING_2024_EXPORT\IIG\ESFERAS PAPER\2. CLUSTERING 3D"
+# Root directory containing all experiments (override with --root-dir)
+root_dir = r"DATA_ROOT"  # placeholder; pass the real path via --root-dir
 
-# Timepoints and replicates
+# ------------------------------------------------------------------------------------
+# USER CONFIGURATION (dataset-specific labels) - edit here or override via the CLI flags
+#   timepoints / replicates : the sub-folder names of your acquisition tree
+#                             <root>/<timepoint>/<replicate>/<experiment folder>/Images
+#   cell_lines              : substrings identifying each cell line inside the experiment
+#                             folder name (used to detect and tag experiments).
+# These are the ONLY values specific to this study; change them for your own dataset.
+# ------------------------------------------------------------------------------------
 timepoints = ["72H", "96H", "120H"]
 replicates = ["R1", "R2", "R3"]
 cell_lines = ["BT549", "HCC1806", "MDA468"]
@@ -79,7 +114,7 @@ if args.images_dir:
 
     base_dir_cli = images_dir_cli.parent  # experiment folder
     base_dirs = [str(base_dir_cli)]
-    print(f"✅ Single-folder mode. Processing only:\n  {base_dir_cli}")
+    print(f"Single-folder mode. Processing only:\n  {base_dir_cli}")
 
 else:
     # --- Standard traversal mode (your existing logic) ---
@@ -98,7 +133,7 @@ else:
                             continue
                     base_dirs.append(full_path)
 
-    print(f"✅ Found {len(base_dirs)} experimental folders for processing.")
+    print(f"Found {len(base_dirs)} experimental folders for processing.")
 
 
 
@@ -110,7 +145,7 @@ else:
 # Loop over each base_dir
 for base_dir in base_dirs:
     try:
-        print(f"\n🚀 Processing: {base_dir}")
+        print(f"\nProcessing: {base_dir}")
 
         # Experiment ID (safe even if base_dir not under root_dir)
         try:
@@ -164,7 +199,7 @@ for base_dir in base_dirs:
 
         # Total number of projections to process
         total_images = len(image_groups)
-        print(f"🔄 Generating maximum intensity projections for {total_images} image stacks...")
+        print(f"Generating maximum intensity projections for {total_images} image stacks...")
 
         # Process each group using a progress bar
         with tqdm(total=total_images, desc="Generating MIP", unit="img") as pbar:
@@ -176,14 +211,14 @@ for base_dir in base_dirs:
                 for file_path in file_list:
                     img = cv2.imread(file_path, cv2.IMREAD_UNCHANGED)
                     if img is None:
-                        print(f"⚠️ Failed to read: {file_path}")
+                        print(f"Failed to read: {file_path}")
                         continue
                     if img.dtype != np.uint16:
-                        print(f"⚠️ Warning: {file_path} is not 16-bit ({img.dtype}).")
+                        print(f"Warning: {file_path} is not 16-bit ({img.dtype}).")
                     stack_images.append(img)
 
                 if len(stack_images) == 0:
-                    print(f"⚠️ No valid planes found for {base_name}.")
+                    print(f"No valid planes found for {base_name}.")
                     pbar.update(1)
                     continue
 
@@ -200,7 +235,7 @@ for base_dir in base_dirs:
                 # Update progress bar
                 pbar.update(1)
 
-        print(f"\n✅ MIP generation completed. Files saved in: {mip_dir}")
+        print(f"\nMIP generation completed. Files saved in: {mip_dir}")
 
 
         # =======================================================================================
@@ -210,7 +245,7 @@ for base_dir in base_dirs:
         # List all TIFF files in the 16-bit MIP directory
         image_files = [f for f in os.listdir(mip_dir) if f.lower().endswith(".tiff")]
 
-        print(f"🔄 Converting {len(image_files)} MIP images to 8-bit...")
+        print(f"Converting {len(image_files)} MIP images to 8-bit...")
 
         # Process each 16-bit image and convert to 8-bit
         for image_file in tqdm(image_files, desc="Converting to 8-bit", unit="img"):
@@ -220,10 +255,12 @@ for base_dir in base_dirs:
             img = cv2.imread(image_path, cv2.IMREAD_UNCHANGED)
 
             if img is None:
-                print(f"⚠️ Could not read {image_file}, skipping.")
+                print(f"Could not read {image_file}, skipping.")
                 continue
 
-            # Percentile clipping to avoid extreme values
+            # Percentile clipping (1st-99th) makes the 8-bit rescaling robust: a few
+            # saturated or dead pixels would otherwise stretch the min-max range and wash
+            # out real intensity differences. Values outside [p1, p99] are clipped first.
             p1, p99 = np.percentile(img, (1, 99))
             img_clipped = np.clip(img, p1, p99)
 
@@ -234,7 +271,7 @@ for base_dir in base_dirs:
             output_path = os.path.join(mip8_dir, image_file)
             cv2.imwrite(output_path, img_8bit)
 
-        print(f"\n✅ All 8-bit MIP images saved in: {mip8_dir}")
+        print(f"\nAll 8-bit MIP images saved in: {mip8_dir}")
 
         #=======================================================================================
         #                       DETECT CONTOURS ON 8-BIT MIP IMAGES
@@ -243,7 +280,7 @@ for base_dir in base_dirs:
         # List all TIFF files in the 8-bit MIP directory
         image_files = [f for f in os.listdir(mip8_dir) if f.lower().endswith(".tiff")]
 
-        print(f"🔍 Processing {len(image_files)} images to detect spheroid contours...\n")
+        print(f"Processing {len(image_files)} images to detect spheroid contours...\n")
 
         # Process each image to detect contours
         for image_file in tqdm(image_files, desc="Detecting contours", unit="img"):
@@ -252,13 +289,17 @@ for base_dir in base_dirs:
             # Load grayscale image
             img = cv2.imread(image_path, cv2.IMREAD_GRAYSCALE)
 
-            # Apply Gaussian blur to reduce noise
+            # --- SEGMENTATION (rationale for each parameter) ---
+            # (a) 5x5 Gaussian blur: suppresses pixel noise so the threshold follows the
+            #     spheroid border rather than speckle. 5x5 is small enough not to erode the edge.
             blurred = cv2.GaussianBlur(img, (5, 5), 0)
-
-            # Apply adaptive thresholding (Otsu) to detect darker spheroids
+            # (b) Otsu threshold with THRESH_BINARY_INV: Otsu picks the intensity cut-off
+            #     automatically (no manual threshold => generalises across images/datasets);
+            #     INV is used because spheroids are DARKER than the bright background, so the
+            #     object must become the foreground (white) after inversion.
             _, binary_otsu = cv2.threshold(blurred, 0, 255, cv2.THRESH_BINARY_INV + cv2.THRESH_OTSU)
-
-            # Morphological filtering to remove small artifacts
+            # (c) Morphological opening (3x3, 2 iterations): removes small bright specks and
+            #     thin bridges without noticeably shrinking the spheroid mask.
             kernel = np.ones((3, 3), np.uint8)
             binary_clean = cv2.morphologyEx(binary_otsu, cv2.MORPH_OPEN, kernel, iterations=2)
 
@@ -275,14 +316,14 @@ for base_dir in base_dirs:
             output_path = os.path.join(contours_dir, image_file)
             cv2.imwrite(output_path, img_contours)
 
-        print(f"\n📁 Contour detection completed. Files saved in: {contours_dir}")
+        print(f"\nContour detection completed. Files saved in: {contours_dir}")
 
 
         # ==============================================================================
         #        SELECT AND DRAW ONLY THE LARGEST SPHEROID CONTOUR PER IMAGE
         # ==============================================================================
 
-        print(f"🔍 Processing {len(image_files)} images to extract the largest spheroid...\n")
+        print(f"Processing {len(image_files)} images to extract the largest spheroid...\n")
 
         # Loop through each image to isolate the largest contour
         for image_file in tqdm(image_files, desc="Drawing largest spheroid", unit="img"):
@@ -309,7 +350,8 @@ for base_dir in base_dirs:
 
             # If at least one contour is found
             if contours:
-                # Select the largest contour based on area
+                # Keep only the LARGEST external contour: under the one-spheroid-per-well
+                # assumption this is the spheroid; smaller contours are debris/artefacts.
                 largest_contour = max(contours, key=cv2.contourArea)
 
                 # Draw it in green
@@ -319,7 +361,7 @@ for base_dir in base_dirs:
                 output_path = os.path.join(spheroids_dir, image_file)
                 cv2.imwrite(output_path, img_color)
 
-        print(f"\n📁 Largest spheroid contours saved in: {spheroids_dir}")
+        print(f"\nLargest spheroid contours saved in: {spheroids_dir}")
 
 
 
@@ -331,7 +373,7 @@ for base_dir in base_dirs:
         extractor = featureextractor.RadiomicsFeatureExtractor()
         extractor.enableAllFeatures()  # Enable ALL features
 
-        # 📁 Directory with images containing the largest object contour
+        #  Directory with images containing the largest object contour
         image_files = [f for f in os.listdir(spheroids_dir) if f.endswith(".tiff")] if os.path.exists(spheroids_dir) else []
 
         # Store extracted features
@@ -360,7 +402,10 @@ for base_dir in base_dirs:
                 area = cv2.contourArea(largest_contour)
                 perimeter = cv2.arcLength(largest_contour, True)
 
-                # Shape descriptors
+                # --- SHAPE DESCRIPTORS (dimensionless, so comparable across sizes) ---
+                # circularity = 1 for a perfect circle, -> 0 for irregular/elongated shapes;
+                # solidity = area/convex-hull area (1 = convex, <1 = concavities/protrusions);
+                # extent = area/bounding-box area; aspect_ratio = major/minor ellipse axis.
                 circularity = (4 * np.pi * area) / (perimeter ** 2) if perimeter > 0 else 0
                 hull = cv2.convexHull(largest_contour)
                 hull_area = cv2.contourArea(hull)
@@ -382,7 +427,10 @@ for base_dir in base_dirs:
                 moments = cv2.moments(largest_contour)
                 hu_moments = cv2.HuMoments(moments).flatten()
 
-                # GLCM texture features
+                # --- TEXTURE FEATURES ---
+                # GLCM (Grey-Level Co-occurrence Matrix) at distance 1, angle 0, 256 levels:
+                # captures internal texture/compactness (contrast, correlation, energy,
+                # homogeneity) that shape descriptors cannot, e.g. loss of a dense core.
                 glcm = graycomatrix(img_gray, [1], [0], 256, symmetric=True, normed=True)
                 contrast = graycoprops(glcm, 'contrast')[0, 0]
                 correlation = graycoprops(glcm, 'correlation')[0, 0]
@@ -408,9 +456,14 @@ for base_dir in base_dirs:
                 mask_path = os.path.join(spheroids_dir, "mask.png")
                 sitk.WriteImage(mask_sitk, mask_path)
 
-                # Radiomics feature extraction
+                # PyRadiomics: full standardised first-order/shape/texture feature set on the
+                # masked spheroid. NOTE: PyRadiomics also emits 'diagnostics_*' columns which
+                # are METADATA (versions, image hash, settings), NOT features; they are dropped
+                # downstream (see 3_label_treatments / clustering / 8_activity_ratio).
                 pyradiomics_features = extractor.execute(img_sitk, mask_sitk)
-                pyradiomics_values = list(pyradiomics_features.values())[1:]  # Skip first (file name)
+                pyradiomics_values = list(pyradiomics_features.values())[1:]  # skip the first diagnostics key
+                # (the list()[1:] above only skips the very first entry; the remaining
+                #  diagnostics_* keys are excluded later where the numeric features are used.)
 
                 # Combine all features
                 features_list.append([
@@ -442,11 +495,11 @@ for base_dir in base_dirs:
 
         # Save to Excel
         df_features.to_excel(features_xlsx, index=False, engine="openpyxl")
-        print(f"✅ Feature table saved to: {features_xlsx}")
+        print(f"Feature table saved to: {features_xlsx}")
 
         # Optional: preview
         df_features.head()
 
 
     except Exception as e:
-        print(f"❌ Error processing {base_dir}: {e}")
+        print(f"[ERROR] Error processing {base_dir}: {e}")

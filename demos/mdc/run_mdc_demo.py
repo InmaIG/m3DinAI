@@ -1,4 +1,16 @@
 # demos/mdc/run_mdc_demo.py
+"""
+m3DinAI - Run the MDC demo pipeline.
+
+Reads demos/mdc/config_mdc_demo.yaml (paths + parameters), locates the demo experiment
+folder downloaded by download_mdc_demo_data.py, and invokes scripts/mdc/0_mdc_pipeline.py
+on it to produce the MDC table and figures. This is a thin, reproducible wrapper around the
+main pipeline for the example dataset.
+
+Usage:
+    python demos/mdc/download_mdc_demo_data.py   # once, to fetch the data
+    python demos/mdc/run_mdc_demo.py
+"""
 import os
 import shlex
 import subprocess
@@ -97,7 +109,7 @@ def main():
     except subprocess.CalledProcessError as e:
         raise SystemExit(f"ERROR: MDC demo failed with exit code {e.returncode}")
 
-    print("\n✅ MDC demo completed.")
+    print("\nMDC demo completed.")
     print("Outputs should be in:")
     print(f"  {exp_dir}")
     print("\nKey expected files (names may vary by pipeline version):")

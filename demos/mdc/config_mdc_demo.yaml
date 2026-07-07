@@ -28,15 +28,15 @@ rebuild_mip: false
 rebuild_features: false
 rebuild_clustering: false
 
-# Optional: UMAP / clustering parameters (only used if your pipeline exposes these flags)
-# If your current 0_mdc_pipeline.py does not accept them, keep them as documentation.
+# UMAP / PCA / KMeans parameters. These document the pipeline defaults; run_mdc_demo.py runs
+# 0_mdc_pipeline.py with its built-in defaults, so change them there (CLI flags) to override.
 umap:
   n_neighbors: 15
   min_dist: 0.1
   random_state: 42
 
 pca:
-  n_components: 10
+  n_components: 20   # matches 0_mdc_pipeline.py default (--pca-components)
 
 kmeans:
   n_clusters: 2

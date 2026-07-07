@@ -4,7 +4,7 @@ m3DinAI is a Python workflow used in the paper **“Label-free morphological pro
 
 This repository contains two complementary workflows that are typically used in sequence:
 
-1. **MDC pipeline (dose–response plates)**: estimates a **Minimum Disruptive Concentration (MDC)** per compound from in-plate triplicate dose series. MDC is intended as an **upstream screening step** to select a practical working concentration (or concentration range) before running larger profiling experiments.
+1. **MDC pipeline (dose–response plates)**: estimates a **Morphological Disruption Concentration (MDC)** per compound from in-plate triplicate dose series. MDC is intended as an **upstream screening step** to select a practical working concentration (or concentration range) before running larger profiling experiments.
 
 2. **Profiling pipeline (morphological profiling)**: runs feature extraction and downstream embedding/clustering across experiments (timepoints/replicates/cell lines), typically using the concentration(s) selected from the MDC screening step.
 

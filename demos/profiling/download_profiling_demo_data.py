@@ -1,4 +1,14 @@
 # demos/profiling/download_profiling_demo_data.py
+"""
+m3DinAI - Download the profiling demo dataset (Zenodo).
+
+Fetches the published profiling demo dataset from Zenodo, verifies it, and unzips it into
+the demo folder so that `run_profiling_demo.py` can reproduce the morphological profiling
+workflow (feature extraction -> labelling -> embedding) on the example data.
+
+Usage:
+    python demos/profiling/download_profiling_demo_data.py
+"""
 import hashlib
 import json
 import shutil
@@ -89,7 +99,7 @@ def ensure_expected_layout(data_dir: Path) -> None:
     """
     expected = data_dir / "72H" / "R1"
     if expected.exists():
-        print(f"✅ Data present under: {expected}")
+        print(f"Data present under: {expected}")
         return
 
     # Common case: ZIP has a single top-level folder (e.g., "<something>/72H/R1/...")
@@ -115,7 +125,7 @@ def ensure_expected_layout(data_dir: Path) -> None:
             tmp.rmdir()
 
     if expected.exists():
-        print(f"✅ Data present under: {expected}")
+        print(f"Data present under: {expected}")
         return
 
     print(f"WARNING: Expected folder not found: {expected}")

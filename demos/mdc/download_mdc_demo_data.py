@@ -1,4 +1,15 @@
 # demos/mdc/download_mdc_demo_data.py
+"""
+m3DinAI - Download the MDC demo dataset (Zenodo).
+
+Fetches the published MDC demo dataset from Zenodo, verifies the download, and unzips it
+into the demo folder so that `run_mdc_demo.py` can process it end to end. Use this to
+reproduce the MDC (dose-response -> Morphological Disruption Concentration) workflow on the
+example data without needing the original acquisition.
+
+Usage:
+    python demos/mdc/download_mdc_demo_data.py
+"""
 import hashlib
 import json
 import shutil
@@ -232,7 +243,7 @@ def main():
     exp_path = ensure_expected_layout(data_dir, experiment_dir)
 
     # 5) Print summary
-    print("\n✅ MDC demo dataset ready.")
+    print("\nMDC demo dataset ready.")
     print(f"Dataset folder:\n  {exp_path}")
     print("Key paths:")
     print(f"  - plate_map.csv: {exp_path / 'plate_map.csv'}")

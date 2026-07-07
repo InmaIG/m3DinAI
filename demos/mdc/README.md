@@ -1,6 +1,6 @@
 # m3DinAI — MDC demo (BT549)
 
-This folder contains a runnable demo for the **MDC (Minimum Disruptive Concentration)** workflow on a BT-549 3D spheroid dose–response plate.
+This folder contains a runnable demo for the **MDC (Morphological Disruption Concentration)** workflow on a BT-549 3D spheroid dose–response plate.
 
 For installation (Conda environment) and general usage, see the repository root `README.md`.
 

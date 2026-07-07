@@ -1,65 +1,72 @@
+# =======================================================================================
+# m3DinAI - Figure 2: per-feature violin plots by cell line
+# File: scripts/profiling/6_violin_plots.py
+#
+# Reads the labelled per-spheroid Excel files for the three cell lines (one replicate /
+# timepoint) and draws one violin plot per morphological feature, comparing the cell
+# lines. Historically features were min-max normalised before plotting; this is kept
+# behind --normalize for reproducibility, but the revised figure uses raw values
+# (see scripts/profiling/13_figure2_violins.py for the revision version with statistics).
+#
+# Input filenames follow: <LINE>_<REPLICATE>_<TIMEPOINT>_spheroid_features_trat.xlsx
+#
+# Usage:
+#   python 6_violin_plots.py --in-dir <LABELLED_DIR> --out-dir <OUT_DIR>
+#       [--replicate R1] [--timepoint 72H] [--normalize]
+# =======================================================================================
+
+import argparse
+import os
 import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
 from sklearn.preprocessing import MinMaxScaler
-import os
 
-# Carga archivos
-bt_file = r"Y:\CELL_PAINTING_2024_EXPORT\IIG\ESFERAS PAPER\2. CLUSTERING 3D\Excels etiquetados\BT549_R1_72H_spheroid_features_trat.xlsx"
-bt = pd.read_excel(bt_file)
+LINE_TAGS = {"BT549": "BT-549", "HCC1806": "HCC1806", "MDA468": "MDA-MB-468"}
+FEATURES = ["Area", "Perimeter", "Circularity", "Solidity", "Extent", "MajorAxis", "MinorAxis", "AspectRatio"]
+PALETTE = {"BT-549": "#aec7e8", "HCC1806": "#ffbb78", "MDA-MB-468": "#98df8a"}
 
-hcc_file = r"Y:\CELL_PAINTING_2024_EXPORT\IIG\ESFERAS PAPER\2. CLUSTERING 3D\Excels etiquetados\HCC1806_R1_72H_spheroid_features_trat.xlsx"
-hcc = pd.read_excel(hcc_file)
 
-mda_file = r"Y:\CELL_PAINTING_2024_EXPORT\IIG\ESFERAS PAPER\2. CLUSTERING 3D\Excels etiquetados\MDA468_R1_72H_spheroid_features_trat.xlsx"
-mda = pd.read_excel(mda_file)
+def main():
+    ap = argparse.ArgumentParser(description="m3DinAI - Figure 2 violin plots by cell line")
+    ap.add_argument("--in-dir", required=True, help="Directory with labelled *_spheroid_features_trat.xlsx")
+    ap.add_argument("--out-dir", required=True, help="Directory to write violin plots")
+    ap.add_argument("--replicate", default="R1")
+    ap.add_argument("--timepoint", default="72H")
+    ap.add_argument("--normalize", action="store_true", help="Min-max normalise each feature before plotting")
+    args = ap.parse_args()
 
-# Features a graficar
-features = ["Area", "Perimeter", "Circularity", "Solidity", "Extent", "MajorAxis", "MinorAxis", "AspectRatio"]
+    os.makedirs(args.out_dir, exist_ok=True)
 
-# Normalizar
-scaler = MinMaxScaler()
-for feature in features:
-    bt[feature] = scaler.fit_transform(bt[[feature]])
-    hcc[feature] = scaler.fit_transform(hcc[[feature]])
-    mda[feature] = scaler.fit_transform(mda[[feature]])
+    # Load one Excel per cell line
+    frames = []
+    for tag, pretty in LINE_TAGS.items():
+        fname = f"{tag}_{args.replicate}_{args.timepoint}_spheroid_features_trat.xlsx"
+        path = os.path.join(args.in_dir, fname)
+        df = pd.read_excel(path)
+        if args.normalize:
+            scaler = MinMaxScaler()
+            for feature in FEATURES:
+                df[feature] = scaler.fit_transform(df[[feature]])
+        df["Cell Line"] = pretty
+        frames.append(df)
+    combined = pd.concat(frames, ignore_index=True)
 
-# Preparar datos combinados
-bt["Cell Line"] = "BT-549"
-hcc["Cell Line"] = "HCC1806"
-mda["Cell Line"] = "MDA-MB-468"
+    suffix = "_normalized" if args.normalize else ""
+    for feature in FEATURES:
+        plt.figure(figsize=(10, 6))
+        sns.violinplot(data=combined, x="Cell Line", y=feature, inner="box", palette=PALETTE)
+        plt.title(f"Violin plot of {feature}", fontsize=20)
+        plt.xlabel("Cell Line", fontsize=18)
+        plt.ylabel(feature, fontsize=18)
+        plt.xticks(fontsize=14)
+        plt.yticks(fontsize=14)
+        plt.tight_layout()
+        out_path = os.path.join(args.out_dir, f"violin_{feature}{suffix}.png")
+        plt.savefig(out_path, dpi=300)
+        plt.close()
+        print(f"Saved: {out_path}")
 
-combined = pd.concat([bt, hcc, mda], ignore_index=True)
 
-# Colores
-palette = {
-    "BT-549": "#aec7e8",
-    "HCC1806": "#ffbb78",
-    "MDA-MB-468": "#98df8a"
-}
-
-# Asegura que el directorio de salida exista
-plot_dir = r"Y:\CELL_PAINTING_2024_EXPORT\IIG\ESFERAS PAPER\2. CLUSTERING 3D\ViolinPlot por features"
-os.makedirs(plot_dir, exist_ok=True)
-
-# Violin plots
-for feature in features:
-    plt.figure(figsize=(10, 6))
-    sns.violinplot(
-        data=combined,
-        x="Cell Line",
-        y=feature,
-        inner="box",
-        palette=palette
-    )
-    plt.title(f"Violin plot of {feature}", fontsize=20)
-    plt.xlabel("Cell Line", fontsize=18)
-    plt.ylabel(feature, fontsize=18)
-    plt.xticks(fontsize=14)
-    plt.yticks(fontsize=14)
-    plt.tight_layout()
-
-    # Guarda el gráfico
-    plt.savefig(os.path.join(plot_dir, f"violin_{feature}_normalized.png"), dpi=300)
-    plt.close()
-    print(f"✅ Saved: violin_{feature}_normalized.png")
+if __name__ == "__main__":
+    main()

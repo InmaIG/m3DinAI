@@ -1,62 +1,90 @@
-"""
-Labels the 'Treatment' column in all Excel files in the specified folder
-and saves a copy in a subfolder called 'Excels etiquetados'.
+# =======================================================================================
+# m3DinAI - Label the 'Treatment' column from the plate layout
+# File: scripts/profiling/3_label_treatments.py
+#
+# WHAT THIS DOES
+#   Reads every feature Excel in --excels-dir, derives each spheroid's Treatment from the
+#   plate COLUMN encoded in its image filename (…c##…), and writes a labelled copy
+#   (<name>_trat.xlsx) into --out-labeled-dir. The Treatment column is what all downstream
+#   analyses (UMAP, violins, Activity Ratio) group by.
+#
+# HOW THE TREATMENT IS DECIDED
+#   Filenames follow the Opera/Harmony convention rXXcYYfZZ, where cYY is the plate column.
+#   In this study each block of columns holds one treatment class (see COLUMN_TREATMENT_MAP).
+#
+# >>> ADAPTING TO A NEW DATASET <<<
+#   This column->treatment layout is the ONLY dataset-specific parameter here. Edit
+#   COLUMN_TREATMENT_MAP below to match your own plate design: each entry is
+#   (first_column, last_column, "Treatment label"), inclusive, 1-based. Columns not covered
+#   by any range are labelled "UNKNOWN".
+# =======================================================================================
 
-Requirements:
-    pip install pandas openpyxl
-"""
-
+import argparse
 import re
 from pathlib import Path
 import pandas as pd
 
-# 1) Folder with the original Excel files
-BASE_DIR = Path(r"Y:\CELL_PAINTING_2024_EXPORT\IIG\ESFERAS PAPER\2. CLUSTERING 3D\EXCELS esferas_completo")
+# ------------------------------------------------------------------------------------
+# USER CONFIGURATION - plate layout for THIS study (edit for your own plate design)
+#
+#   Columns 1-3  : DMSO (vehicle / negative control)
+#   Columns 4-9  : Anthracyclines          (4-6 Doxorubicin, 7-9 Epirubicin)
+#   Columns 10-15: Topoisomerase inhibitor (10-12 Etoposide, 13-15 Camptothecin)
+#   Columns 16-21: Taxane                  (16-18 Docetaxel, 19-21 Paclitaxel)
+#   Columns 22-24: MMS (positive / maximal-disruption control)
+#
+# Each tuple is (first_col, last_col, label), inclusive and 1-based.
+# ------------------------------------------------------------------------------------
+COLUMN_TREATMENT_MAP = [
+    (1, 3, "DMSO"),
+    (4, 9, "Anthracyclines"),
+    (10, 15, "Topoisomerase inhibitor"),
+    (16, 21, "Taxane"),
+    (22, 24, "MMS"),
+]
 
-# 2) Output folder (created if it doesn't exist)
-OUT_DIR = BASE_DIR.parent / "Excels etiquetados"
-OUT_DIR.mkdir(parents=True, exist_ok=True)
-
-# --- CLI  ---
-import argparse
-
-parser = argparse.ArgumentParser(description="m3DinAI - Label treatments in Excel files")
-parser.add_argument("--excels-dir", default=str(BASE_DIR), help="Directory with collected Excel files")
-parser.add_argument("--out-labeled-dir", default=str(OUT_DIR), help="Directory to write labeled Excel files")
-args, _unknown = parser.parse_known_args()
-
-BASE_DIR = Path(args.excels_dir)
-OUT_DIR = Path(args.out_labeled_dir)
-OUT_DIR.mkdir(parents=True, exist_ok=True)
-
-# 3) Regular expression to extract the column number c##
+# Regex to pull the column number (c##) out of the image filename
 COL_REGEX = re.compile(r"c(\d{2})", flags=re.IGNORECASE)
 
+
 def assign_treatment(colnum: int) -> str:
-    if   1 <= colnum <= 3:   return "DMSO"
-    elif 4 <= colnum <= 9:   return "Anthracyclines"
-    elif 10 <= colnum <= 15: return "Topoisomerase inhibitor"
-    elif 16 <= colnum <= 21: return "Taxane"
-    elif 22 <= colnum <= 24: return "MMS"
-    else:                    return "UNKNOWN"
+    """Map a 1-based plate column to its Treatment label using COLUMN_TREATMENT_MAP."""
+    for first, last, label in COLUMN_TREATMENT_MAP:
+        if first <= colnum <= last:
+            return label
+    return "UNKNOWN"
 
-# 4) Process each .xlsx file in the original folder
-for excel in BASE_DIR.glob("*.xlsx"):
-    print(f"- Processing {excel.name}…")
-    df = pd.read_excel(excel, engine="openpyxl")
 
-    # Add / update the "Treatment" column
-    df["Treatment"] = (
-        df["Filename"].astype(str)
-          .str.extract(COL_REGEX)[0]            # column number as string
-          .astype(float).astype("Int64")        # tolerates NaN
-          .apply(lambda x: assign_treatment(int(x)) if pd.notna(x) else None)
-    )
+def main():
+    ap = argparse.ArgumentParser(description="m3DinAI - label treatments from plate column")
+    ap.add_argument("--excels-dir", required=True, help="Directory with the feature Excel files")
+    ap.add_argument("--out-labeled-dir", default=None,
+                    help="Directory to write labelled files (default: <excels-dir>/Excels etiquetados)")
+    args = ap.parse_args()
 
-    # Output path: same base name + _trat.xlsx inside OUT_DIR
-    out_path = OUT_DIR / f"{excel.stem}_trat.xlsx"
-    df.to_excel(out_path, index=False, engine="openpyxl")
-    print(f"  ✔ Saved to {out_path}")
+    base_dir = Path(args.excels_dir)
+    out_dir = Path(args.out_labeled_dir) if args.out_labeled_dir else base_dir.parent / "Excels etiquetados"
+    out_dir.mkdir(parents=True, exist_ok=True)
 
-print("Completed! All labeled files are in the 'excels_demo_labeled' folder.")
+    for excel in base_dir.glob("*.xlsx"):
+        print(f"- Processing {excel.name} ...")
+        df = pd.read_excel(excel, engine="openpyxl")
 
+        # Extract the column number from each Filename and map it to a Treatment label.
+        # (Int64 tolerates missing/invalid filenames -> those rows get Treatment = None.)
+        df["Treatment"] = (
+            df["Filename"].astype(str)
+              .str.extract(COL_REGEX)[0]
+              .astype(float).astype("Int64")
+              .apply(lambda x: assign_treatment(int(x)) if pd.notna(x) else None)
+        )
+
+        out_path = out_dir / f"{excel.stem}_trat.xlsx"
+        df.to_excel(out_path, index=False, engine="openpyxl")
+        print(f"  Saved to {out_path}")
+
+    print(f"Completed. Labelled files are in: {out_dir}")
+
+
+if __name__ == "__main__":
+    main()

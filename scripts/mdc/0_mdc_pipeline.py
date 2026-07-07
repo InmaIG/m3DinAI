@@ -81,7 +81,16 @@ def parse_args():
     p.add_argument("--steps", default="1-10", help="Steps to run (default 1-10). Examples: 7, 8-10, 9-10")
     p.add_argument("--seed", type=int, default=42, help="Random seed (UMAP/KMeans + sampling)")
 
-    # clustering params (defaults = your notebook)
+    # Clustering parameters (defaults reproduce the manuscript analysis).
+    #  --pca-components 20 : PCA denoises/decorrelates the ~hundreds of radiomics features
+    #                        and speeds up UMAP; 20 PCs retain the dominant morphological
+    #                        variance while discarding noise.
+    #  --umap-neighbors 15 / --umap-min-dist 0.1 : standard UMAP settings balancing local
+    #                        vs global structure (same values used across the study).
+    #  --kmeans-k 2        : the MDC assay only needs two morphological states -
+    #                        "unaffected" vs "affected"; k=2 partitions the embedding into
+    #                        those two groups (anchored to DMSO in step 10).
+    #  --seed 42           : fixes UMAP/KMeans/sampling for reproducibility.
     p.add_argument("--pca-components", type=int, default=20)
     p.add_argument("--umap-neighbors", type=int, default=15)
     p.add_argument("--umap-min-dist", type=float, default=0.1)
@@ -236,7 +245,7 @@ if 1 in RUN:
     mip16_existing = any_tiffs_in_dir(output_dir_mip16)
 
     if SKIP_IF_EXISTS and mip16_existing and not REBUILD_MIP:
-        print(f"⏭️  [1] Skipping MIP (16-bit): already exists in {output_dir_mip16}")
+        print(f"[1] Skipping MIP (16-bit): already exists in {output_dir_mip16}")
     else:
         image_groups = {}
         for file in os.listdir(z_stack_dir):
@@ -246,7 +255,7 @@ if 1 in RUN:
                 image_groups.setdefault(base_name, []).append(os.path.join(z_stack_dir, file))
 
         total_images = len(image_groups)
-        print(f"🔄 [1] Generating maximum intensity projections for {total_images} image stacks...")
+        print(f" [1] Generating maximum intensity projections for {total_images} image stacks...")
 
         with tqdm(total=total_images, desc="Generating MIP", unit="img") as pbar:
             for base_name, file_list in image_groups.items():
@@ -255,12 +264,12 @@ if 1 in RUN:
                 for fp in file_list:
                     img = cv2.imread(fp, cv2.IMREAD_UNCHANGED)
                     if img is None:
-                        print(f"⚠️ Failed to read: {fp}")
+                        print(f" Failed to read: {fp}")
                         continue
                     stack_images.append(img)
 
                 if len(stack_images) == 0:
-                    print(f"⚠️ No valid planes found for {base_name}.")
+                    print(f" No valid planes found for {base_name}.")
                     pbar.update(1)
                     continue
 
@@ -270,7 +279,7 @@ if 1 in RUN:
                 cv2.imwrite(outp, mip_image)
                 pbar.update(1)
 
-        print(f"✅ [1] MIP generation completed. Files saved in: {output_dir_mip16}")
+        print(f"[1] MIP generation completed. Files saved in: {output_dir_mip16}")
 
 
 # =======================================================================================
@@ -281,16 +290,16 @@ if 2 in RUN:
     mip8_existing = any_tiffs_in_dir(output_dir_mip8)
 
     if SKIP_IF_EXISTS and mip8_existing and not REBUILD_MIP:
-        print(f"⏭️  [2] Skipping MIP (8-bit): already exists in {output_dir_mip8}")
+        print(f"[2] Skipping MIP (8-bit): already exists in {output_dir_mip8}")
     else:
         image_files = [f for f in os.listdir(output_dir_mip16) if f.lower().endswith(".tiff")]
-        print(f"🔄 [2] Converting {len(image_files)} MIP images to 8-bit...")
+        print(f" [2] Converting {len(image_files)} MIP images to 8-bit...")
 
         for image_file in tqdm(image_files, desc="Converting to 8-bit", unit="img"):
             image_path = os.path.join(output_dir_mip16, image_file)
             img = cv2.imread(image_path, cv2.IMREAD_UNCHANGED)
             if img is None:
-                print(f"⚠️ Could not read {image_file}, skipping.")
+                print(f" Could not read {image_file}, skipping.")
                 continue
 
             p1, p99 = np.percentile(img, (1, 99))
@@ -300,7 +309,7 @@ if 2 in RUN:
             outp = os.path.join(output_dir_mip8, image_file)
             cv2.imwrite(outp, img_8bit)
 
-        print(f"✅ [2] All 8-bit MIP images saved in: {output_dir_mip8}")
+        print(f"[2] All 8-bit MIP images saved in: {output_dir_mip8}")
 
 
 # =======================================================================================
@@ -311,10 +320,10 @@ if 3 in RUN:
     contours_existing = any_tiffs_in_dir(contours_dir)
 
     if SKIP_IF_EXISTS and contours_existing and not REBUILD_MIP:
-        print(f"⏭️  [3] Skipping contours: already exists in {contours_dir}")
+        print(f"[3] Skipping contours: already exists in {contours_dir}")
     else:
         image_files = [f for f in os.listdir(output_dir_mip8) if f.lower().endswith(".tiff")]
-        print(f"🔍 [3] Processing {len(image_files)} images to detect spheroid contours...")
+        print(f" [3] Processing {len(image_files)} images to detect spheroid contours...")
 
         for image_file in tqdm(image_files, desc="Detecting contours", unit="img"):
             image_path = os.path.join(output_dir_mip8, image_file)
@@ -336,7 +345,7 @@ if 3 in RUN:
             outp = os.path.join(contours_dir, image_file)
             cv2.imwrite(outp, img_contours)
 
-        print(f"✅ [3] Contour detection completed. Files saved in: {contours_dir}")
+        print(f"[3] Contour detection completed. Files saved in: {contours_dir}")
 
 
 # =======================================================================================
@@ -347,7 +356,7 @@ if 4 in RUN:
     if any_tiffs_in_dir(contours_dir):
         show_random_grid(contours_dir, max_images=20, cols=5, title_prefix="")
     else:
-        print("⚠️ [4] No contour images found to display.")
+        print(" [4] No contour images found to display.")
 
 
 # =======================================================================================
@@ -358,10 +367,10 @@ if 5 in RUN:
     spheroids_existing = any_tiffs_in_dir(spheroids_dir)
 
     if SKIP_IF_EXISTS and spheroids_existing and not REBUILD_MIP:
-        print(f"⏭️  [5] Skipping largest-contour images: already exists in {spheroids_dir}")
+        print(f"[5] Skipping largest-contour images: already exists in {spheroids_dir}")
     else:
         image_files = [f for f in os.listdir(contours_dir) if f.lower().endswith(".tiff")]
-        print(f"🔍 [5] Processing {len(image_files)} images to extract the largest spheroid...")
+        print(f" [5] Processing {len(image_files)} images to extract the largest spheroid...")
 
         for image_file in tqdm(image_files, desc="Drawing largest spheroid", unit="img"):
             image_path = os.path.join(contours_dir, image_file)
@@ -387,7 +396,7 @@ if 5 in RUN:
                 outp = os.path.join(spheroids_dir, image_file)
                 cv2.imwrite(outp, img_color)
 
-        print(f"✅ [5] Largest spheroid contours saved in: {spheroids_dir}")
+        print(f"[5] Largest spheroid contours saved in: {spheroids_dir}")
 
 
 # =======================================================================================
@@ -398,7 +407,7 @@ if 6 in RUN:
     if any_tiffs_in_dir(spheroids_dir):
         show_random_grid(spheroids_dir, max_images=20, cols=5, title_prefix="")
     else:
-        print("⚠️ [6] No spheroid images found to display.")
+        print(" [6] No spheroid images found to display.")
 
 
 # =======================================================================================
@@ -409,7 +418,7 @@ df_features = None
 
 if 7 in RUN:
     if SKIP_IF_EXISTS and os.path.exists(output_excel_path) and not REBUILD_FEATURES:
-        print(f"⏭️  [7] Skipping feature extraction: Excel already exists: {output_excel_path}")
+        print(f"[7] Skipping feature extraction: Excel already exists: {output_excel_path}")
         df_features = pd.read_excel(output_excel_path, engine="openpyxl")
     else:
         extractor = featureextractor.RadiomicsFeatureExtractor()
@@ -418,7 +427,7 @@ if 7 in RUN:
         image_files = [f for f in os.listdir(spheroids_dir) if f.lower().endswith(".tiff")]
         features_list = []
 
-        print(f"🧬 [7] Extracting features from {len(image_files)} images...")
+        print(f" [7] Extracting features from {len(image_files)} images...")
         with tqdm(total=len(image_files), desc="Extracting features", unit="img") as pbar:
             for image_file in image_files:
                 image_path = os.path.join(spheroids_dir, image_file)
@@ -503,7 +512,7 @@ if 7 in RUN:
 
         df_features = pd.DataFrame(features_list, columns=column_names)
         df_features.to_excel(output_excel_path, index=False, engine="openpyxl")
-        print(f"✅ [7] Feature table saved to: {output_excel_path}")
+        print(f"[7] Feature table saved to: {output_excel_path}")
 
 
 # =======================================================================================
@@ -520,7 +529,7 @@ if 8 in RUN:
     )
 
     if SKIP_IF_EXISTS and clustering_existing and not REBUILD_CLUSTERING:
-        print("⏭️  [8] Skipping clustering: outputs already exist:")
+        print("[8] Skipping clustering: outputs already exist:")
         print(f"   - {output_excel_clusters}")
         print(f"   - {umap_png_path}")
         print(f"   - {umap_csv_path}")
@@ -529,6 +538,8 @@ if 8 in RUN:
         # Always cluster from features excel
         df = pd.read_excel(output_excel_path, engine="openpyxl")
 
+        # Drop PyRadiomics 'diagnostics_*' columns: these are metadata (versions, image
+        # hash, settings), NOT morphological features, and must not drive the clustering.
         columns_to_exclude = [c for c in df.columns if str(c).startswith("diagnostics_")]
         df_filtered = df.drop(columns=columns_to_exclude, errors="ignore")
 
@@ -536,9 +547,13 @@ if 8 in RUN:
         if df_numeric.shape[1] == 0:
             raise RuntimeError("No numeric columns available for clustering after filtering diagnostics_.")
 
+        # z-score every feature so that features with large numeric ranges (e.g. Area) do
+        # not dominate the distance metric over small-range shape descriptors.
         scaler = StandardScaler()
         data_scaled = scaler.fit_transform(df_numeric)
 
+        # PCA (20 comps) -> UMAP (2D) -> KMeans: PCA removes correlated noise before the
+        # non-linear UMAP embedding; KMeans then splits the embedding into k groups.
         pca = PCA(n_components=args.pca_components)
         data_pca = pca.fit_transform(data_scaled)
 
@@ -566,13 +581,13 @@ if 8 in RUN:
         plt.tight_layout()
         plt.savefig(umap_png_path, dpi=300, bbox_inches="tight")
         plt.show()
-        print(f"✅ [8] UMAP plot saved to: {umap_png_path}")
+        print(f"[8] UMAP plot saved to: {umap_png_path}")
 
         df.to_excel(output_excel_clusters, index=False, engine="openpyxl")
-        print(f"✅ [8] Clustering results saved to: {output_excel_clusters}")
+        print(f"[8] Clustering results saved to: {output_excel_clusters}")
 
         df[["Filename", "UMAP1", "UMAP2", "cluster"]].to_csv(umap_csv_path, index=False)
-        print(f"✅ [8] UMAP embedding saved to: {umap_csv_path}")
+        print(f"[8] UMAP embedding saved to: {umap_csv_path}")
 
 
 # =======================================================================================
@@ -582,7 +597,7 @@ if 8 in RUN:
 if 9 in RUN:
     # Heatmap skipping depends only on heatmap file existence (NOT on clustering)
     if SKIP_IF_EXISTS and os.path.exists(heatmap_path) and not REBUILD_CLUSTERING:
-        print(f"⏭️  [9] Skipping heatmap: already exists: {heatmap_path}")
+        print(f"[9] Skipping heatmap: already exists: {heatmap_path}")
     else:
         # ensure df loaded
         if df is None:
@@ -631,7 +646,7 @@ if 9 in RUN:
 
                 label_matrix[prow, pcol] = label
         else:
-            print(f"⚠️ [9] plate_map.csv not found at: {plate_map_path}. Heatmap will be unlabeled.")
+            print(f" [9] plate_map.csv not found at: {plate_map_path}. Heatmap will be unlabeled.")
 
         plt.figure(figsize=(16, 10))
         plt.imshow(plate_matrix, cmap="bwr", interpolation="nearest")
@@ -652,18 +667,25 @@ if 9 in RUN:
         plt.tight_layout()
         plt.savefig(heatmap_path, dpi=300, bbox_inches="tight")
         plt.show()
-        print(f"✅ [9] Heatmap saved to: {heatmap_path}")
+        print(f"[9] Heatmap saved to: {heatmap_path}")
 
 
 # =======================================================================================
-# 10) MDC table (per compound)
-# Definition: lowest dose where ALL 3 within-plate reps (1,2,3) are in affected cluster.
-# Affected/unaffected inferred from DMSO anchoring.
+# 10) MDC table (per compound) - Morphological Disruption Concentration
+#
+# RATIONALE / DEFINITION:
+#   KMeans (step 8) splits spheroids into two morphological states but does not know which
+#   is which. We ANCHOR them biologically: the cluster containing most DMSO (vehicle) wells
+#   is the "unaffected" state; the other cluster is the "affected" (disrupted) state.
+#   The MDC for a compound is then the LOWEST dose at which ALL 3 within-plate replicate
+#   wells fall in the affected cluster - i.e. the lowest concentration that reproducibly
+#   disrupts spheroid morphology. Requiring all 3 replicates avoids calling an MDC from a
+#   single noisy well.
 # =======================================================================================
 
 if 10 in RUN:
     if SKIP_IF_EXISTS and os.path.exists(mdc_out_xlsx) and os.path.exists(mdc_out_csv) and not REBUILD_CLUSTERING:
-        print(f"⏭️  [10] Skipping MDC table: already exists:\n  {mdc_out_xlsx}\n  {mdc_out_csv}")
+        print(f"[10] Skipping MDC table: already exists:\n  {mdc_out_xlsx}\n  {mdc_out_csv}")
     else:
         if df is None:
             if os.path.exists(output_excel_clusters):
@@ -672,7 +694,7 @@ if 10 in RUN:
                 raise RuntimeError("MDC requires clustering output. Run step 8 first (or include it in --steps).")
 
         if not os.path.exists(plate_map_path):
-            print(f"❌ [10] Cannot compute MDC: plate_map.csv not found at: {plate_map_path}")
+            print(f"[ERROR] [10] Cannot compute MDC: plate_map.csv not found at: {plate_map_path}")
         else:
             pm = pd.read_csv(plate_map_path)
             pm["rc"] = pm["rc"].astype(str).str.lower()
@@ -682,12 +704,13 @@ if 10 in RUN:
 
             merged = df_m.merge(pm, on="rc", how="inner")
             if merged.empty:
-                print("❌ [10] MDC: merge produced 0 rows. Check rc mapping between filenames and plate_map.csv")
+                print("[ERROR] [10] MDC: merge produced 0 rows. Check rc mapping between filenames and plate_map.csv")
             else:
-                # 1) decide unaffected cluster (most DMSO)
+                # 1) Anchor: the cluster where most DMSO (vehicle) wells sit = "unaffected".
+                #    This gives the otherwise label-free KMeans clusters a biological meaning.
                 dmso = merged[merged["compound"].astype(str).str.upper() == "DMSO"]
                 if dmso.empty:
-                    print("❌ [10] MDC: no DMSO wells found after merge. Check plate_map.csv DMSO entries.")
+                    print("[ERROR] [10] MDC: no DMSO wells found after merge. Check plate_map.csv DMSO entries.")
                 else:
                     dmso_counts = dmso["cluster"].value_counts()
                     unaffected_cluster = int(dmso_counts.idxmax())
@@ -700,9 +723,9 @@ if 10 in RUN:
                             break
 
                     if affected_cluster is None:
-                        print("❌ [10] MDC: only one cluster present; cannot define affected/unaffected.")
+                        print("[ERROR] [10] MDC: only one cluster present; cannot define affected/unaffected.")
                     else:
-                        print(f"✅ [10] MDC anchor: unaffected_cluster={unaffected_cluster} (most DMSO), affected_cluster={affected_cluster}")
+                        print(f"[10] MDC anchor: unaffected_cluster={unaffected_cluster} (most DMSO), affected_cluster={affected_cluster}")
 
                         drug_df = merged[merged["control_type"].astype(str).str.lower() == "drug"].copy()
                         drug_df["plate_rep"] = pd.to_numeric(drug_df.get("plate_rep", ""), errors="coerce")
@@ -719,10 +742,12 @@ if 10 in RUN:
                             mdc_dose = None
                             mdc_unit = ""
 
+                            # Walk doses from LOW to HIGH; the first dose meeting the
+                            # "all 3 replicates affected" criterion is the MDC for that compound.
                             for dose_val, gd in g.groupby("dose_num", sort=False):
                                 reps_present = set(gd["plate_rep"].dropna().astype(int).tolist())
                                 if reps_present == {1, 2, 3}:
-                                    # require all 3 reps affected
+                                    # require all 3 within-plate reps in the affected cluster
                                     byrep = gd.groupby("plate_rep")["cluster"].first()
                                     if (byrep == affected_cluster).all():
                                         mdc_dose = float(dose_val)
@@ -740,9 +765,9 @@ if 10 in RUN:
                         mdc_table = pd.DataFrame(results).sort_values(["compound"])
                         mdc_table.to_excel(mdc_out_xlsx, index=False, engine="openpyxl")
                         mdc_table.to_csv(mdc_out_csv, index=False)
-                        print(f"✅ [10] MDC table saved to:\n  {mdc_out_xlsx}\n  {mdc_out_csv}")
+                        print(f"[10] MDC table saved to:\n  {mdc_out_xlsx}\n  {mdc_out_csv}")
 
 
-print("\n✅ Pipeline finished.")
+print("\nPipeline finished.")
 print(f"Experiment folder: {base_dir}")
 print(f"Plate map used: {plate_map_path}")

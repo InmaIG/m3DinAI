@@ -1,4 +1,15 @@
 # demos/profiling/run_profiling_demo.py
+"""
+m3DinAI - Run the profiling demo pipeline.
+
+Reads demos/profiling/config_profiling_demo.yaml and runs the profiling scripts
+(feature extraction, treatment labelling, embedding/plots) on the demo dataset downloaded by
+download_profiling_demo_data.py. Reproducible wrapper around the main profiling workflow.
+
+Usage:
+    python demos/profiling/download_profiling_demo_data.py   # once, to fetch the data
+    python demos/profiling/run_profiling_demo.py
+"""
 import argparse
 import subprocess
 import sys
@@ -140,7 +151,7 @@ def main():
             cmd4 += ["--keep-treatments", keep_arg]
         run(cmd4)
 
-    print("\n✅ Demo complete.")
+    print("\nDemo complete.")
     print(f"Outputs written to:\n  {out_dir}")
     print("Key folders:")
     print(f"  - {results_dir}")

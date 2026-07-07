@@ -1,4 +1,11 @@
-# demo/config_demo.yaml
+# demos/profiling/config_profiling_demo.yaml
+#
+# Configuration for run_profiling_demo.py (profiling demo on the Zenodo example dataset).
+#   demo.data_dir / out_dir            : where the demo data lives and where outputs go
+#   demo.timepoints / replicates       : which acquisition sub-folders to process
+#   demo.include_experiment_name_contains : only process experiment folders matching these tags
+#   demo.keep_treatments               : subset of treatments used for the demo plots
+#   pipeline.*                         : paths to the profiling scripts that the demo runs
 demo:
   data_dir: "demo_data"
   out_dir: "demo_out"
