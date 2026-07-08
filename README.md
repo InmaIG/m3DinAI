@@ -232,7 +232,7 @@ python scripts/mdc/0_mdc_pipeline.py --z-stack-dir "PATH/TO/EXPERIMENT/Images" -
 
 ## Demo datasets and software DOIs (Zenodo)
 
-* Software release (v1.1.1): `10.5281/zenodo.18889899`
+* Software release (v1.2.0): `10.5281/zenodo.21256287`
 * MDC demo dataset: `10.5281/zenodo.18876611`
 * Profiling demo dataset: `10.5281/zenodo.18847934`
 
